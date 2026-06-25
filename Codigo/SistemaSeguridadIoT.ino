@@ -10,23 +10,26 @@
 
 // WIFI
 
-const char* ssid = "Seguridad IoT";
-const char* password = "seguridad2026";
+const char* ssid = "TU_WIFI_NOMBRE";
+const char* password = "TU_CLAVE";
 
 // TELEGRAM
 
-#define BOT_TOKEN "8775448994:AAHrs8_GqQhwcngiHRmtv66c422ZON8Bh-E"
-#define CHAT_ID "8705170503"
+#define BOT_TOKEN "TU_TOKEN"
+#define CHAT_ID "TU_CHAT_ID"
 
 WiFiClientSecure secureClient;
 UniversalTelegramBot bot(BOT_TOKEN, secureClient);
 
 // THINGSPEAK
 
+
 WiFiClient client;
 
 unsigned long channelID = 0;
-const char* writeAPIKey = "";
+const char* writeAPIKey = "TU_API_KEY"
+const char* password = "TU_PASSWORD"
+
 
 // BLUETOOTH
 
