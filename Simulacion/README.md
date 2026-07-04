@@ -10,6 +10,6 @@ Durante esta etapa se verificó el funcionamiento de la lógica de control del s
 - Activación de la alarma sonora mediante buzzer.
 - Temporizadores y lógica de confirmación de intrusión.
 
-Debido a las limitaciones de la plataforma de simulación, las funciones de conectividad IoT (WiFi, Telegram, ThingSpeak y aplicación móvil) no fueron verificadas dentro de Wokwi y posteriormente fueron implementadas y probadas sobre el prototipo físico.
+En la plataforma de simulación las funciones de conectividad IoT (WiFi, Gmail, ThingSpeak y aplicación móvil) no fueron verificadas. Sin embargo, posteriormente fueron implementadas y probadas sobre el prototipo físico.
 
 El enlace a la simulación utilizada se encuentra en el archivo correspondiente.
