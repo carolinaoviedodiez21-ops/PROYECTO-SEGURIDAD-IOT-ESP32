@@ -8,12 +8,12 @@
 #include <ESP_Mail_Client.h>
 
 // ================= WIFI =================
-const char* ssid = "InternetIoT"; //"Personal-WiFi-7E6-2.4Ghz";
-const char* password = "Carolina21"; //"JTwswJ2ASA";
+const char* ssid = "NOMBRE_WIFI";
+const char* password = "CONTRASEÑA_WIFI"; //"JTwswJ2ASA";
 
 // ================= THINGSPEAK =================
-unsigned long channelID = 3408842;
-const char* writeAPIKey = "V1JLNQ93XKS4DD74";
+unsigned long channelID = CHANNEL_NOMBRE;
+const char* writeAPIKey = "WRITE_APIKEY";
 
 WiFiClient tsClient;
 
@@ -78,8 +78,8 @@ void enviarCorreoIntrusion() {
 
   config.server.host_name = "smtp.gmail.com";
   config.server.port = 465;
-  config.login.email = "carolinaoviedodiez21@gmail.com";
-  config.login.password = "mmqxypksioatpirf";
+  config.login.email = "DIRECCION_GMAIL";
+  config.login.password = "CLAVE_APLICACION_GOOGLE"; //16 CARACTERES
   config.login.user_domain = "";
 
   smtp.debug(1);
