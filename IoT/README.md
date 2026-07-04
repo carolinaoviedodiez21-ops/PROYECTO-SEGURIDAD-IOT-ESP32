@@ -13,9 +13,9 @@ Variables registradas:
 - Estado de la alarma.
 - Estado general del sistema.
 
-## Telegram
+## Gamil
 
-Se utiliza un bot de Telegram para enviar notificaciones automáticas al usuario cuando se detectan eventos relevantes.
+Se utiliza gmail para enviar notificaciones automáticas al usuario cuando se detectan eventos relevantes.
 
 Entre los mensajes enviados se incluyen:
 
