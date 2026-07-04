@@ -13,7 +13,7 @@ Características:
 - Confirmación de intrusión mediante sensor PIR.
 - Alarma visual mediante LEDs.
 - Alarma sonora mediante buzzer.
-- Notificaciones automáticas mediante Telegram.
+- Notificaciones automáticas mediante Gmail.
 - Registro de datos en ThingSpeak.
 - Aplicación móvil desarrollada en MIT App Inventor.
 - Comunicación Bluetooth para activación y desactivación.
@@ -22,7 +22,7 @@ Tecnologías utilizadas:
 - ESP32 DevKit V1
 - Arduino IDE
 - ThingSpeak
-- Telegram Bot
+- Gmail
 - MIT App Inventor
 - Wokwi
 - Fritzing
