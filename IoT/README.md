@@ -13,7 +13,7 @@ Variables registradas:
 - Estado de la alarma.
 - Estado general del sistema.
 
-## Gamil
+## Gmail
 
 Se utiliza gmail para enviar notificaciones automáticas al usuario cuando se detectan eventos relevantes.
 
