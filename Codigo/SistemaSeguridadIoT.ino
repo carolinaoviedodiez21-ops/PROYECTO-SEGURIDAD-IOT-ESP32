@@ -1,78 +1,61 @@
-
-// LIBRERÍAS
+// OVIEDO DIEZ CAROLINA DEL CARMEN
+// PROYECTO DE PROGRAMACIÓN AVANZADA
+// SISTEMA DE SEGURIDAD IoT CON ESP32
 
 #include <WiFi.h>
-#include <WiFiClient.h>
-#include <WiFiClientSecure.h>
 #include <ThingSpeak.h>
-#include <UniversalTelegramBot.h>
 #include <BluetoothSerial.h>
+#include <ESP_Mail_Client.h>
 
-// WIFI
+// ================= WIFI =================
+const char* ssid = "InternetIoT"; //"Personal-WiFi-7E6-2.4Ghz";
+const char* password = "Carolina21"; //"JTwswJ2ASA";
 
-const char* ssid = "TU_WIFI_NOMBRE";
-const char* password = "TU_CLAVE";
+// ================= THINGSPEAK =================
+unsigned long channelID = 3408842;
+const char* writeAPIKey = "V1JLNQ93XKS4DD74";
 
-// TELEGRAM
+WiFiClient tsClient;
 
-#define BOT_TOKEN "TU_TOKEN"
-#define CHAT_ID "TU_CHAT_ID"
-
-WiFiClientSecure secureClient;
-UniversalTelegramBot bot(BOT_TOKEN, secureClient);
-
-// THINGSPEAK
-
-
-WiFiClient client;
-
-unsigned long channelID = 0;
-const char* writeAPIKey = "TU_API_KEY"
-const char* password = "TU_PASSWORD"
-
-
-// BLUETOOTH
-
+// ================= BLUETOOTH =================
 BluetoothSerial SerialBT;
 
-// PINES
+// ================= EMAIL (ESP MAIL CLIENT) =================
+SMTPSession smtp;
+Session_Config config;
 
-#define TRIG_PIN      19
-#define ECHO_PIN      18
+bool emailEnviado = false;
 
-#define PIR_PIN       33
+// ================= PINES =================
+#define TRIG_PIN 32
+#define ECHO_PIN 35
+#define PIR_PIN 33
 
-#define LED_ROJO      14
-#define LED_BLANCO_1  16
-#define LED_BLANCO_2  17
+#define LED_ROJO 14
+#define LED_BLANCO_1 26
+#define LED_BLANCO_2 27
 
-#define BUZZER_PIN    15
+#define BUZZER_PIN 12
 
-// VARIABLES
-
-bool sistemaArmado = false;   // inicia desarmado
-
+// ================= VARIABLES =================
+bool sistemaArmado = true;
 bool alertaPuerta = false;
 bool intrusionConfirmada = false;
-
-bool telegramPuertaEnviado = false;
-bool telegramIntrusionEnviado = false;
 
 unsigned long tiempoInicioPuerta = 0;
 unsigned long tiempoAlerta = 0;
 
 unsigned long ultimoParpadeo = 0;
+unsigned long ultimoEnvioTS = 0;
+
 bool estadoParpadeo = false;
 
-// CONFIGURACIÓN
-
+// ================= CONSTANTES =================
 const float DISTANCIA_UMBRAL = 10.0;
-
 const unsigned long TIEMPO_PUERTA = 5000;
-const unsigned long TIEMPO_CONFIRMACION = 30000;
+const unsigned long TIEMPO_CONFIRMACION = 15000;
 
-// MEDIR DISTANCIA
-
+// ================= DISTANCIA =================
 float medirDistancia() {
 
   digitalWrite(TRIG_PIN, LOW);
@@ -85,41 +68,75 @@ float medirDistancia() {
 
   long duracion = pulseIn(ECHO_PIN, HIGH, 30000);
 
-  if (duracion == 0)
-    return -1;
+  if (duracion == 0) return -1;
 
   return duracion * 0.034 / 2.0;
 }
 
-// SETUP
+// ================= ENVÍO EMAIL =================
+void enviarCorreoIntrusion() {
 
+  config.server.host_name = "smtp.gmail.com";
+  config.server.port = 465;
+  config.login.email = "carolinaoviedodiez21@gmail.com";
+  config.login.password = "mmqxypksioatpirf";
+  config.login.user_domain = "";
+
+  smtp.debug(1);
+  smtp.callback(NULL);
+
+  SMTP_Message message;
+
+  message.sender.name = "Sistema IoT";
+  message.sender.email = config.login.email;
+
+  message.subject = "ALERTA - INTRUSIÓN DETECTADA";
+
+  message.addRecipient("Usuario", config.login.email);
+
+  String texto =
+    "ALERTA DE SEGURIDAD\n\n"
+    "Se detectó una intrusión en el sistema IoT.\n"
+    "Revise inmediatamente la instalación.";
+
+  message.text.content = texto.c_str();
+  message.text.charSet = "utf-8";
+  message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
+
+  if (!smtp.connect(&config)) {
+    Serial.println("Error SMTP connect");
+    return;
+  }
+
+  if (!MailClient.sendMail(&smtp, &message)) {
+    Serial.println("Error enviando email");
+  } else {
+    Serial.println("Email enviado correctamente");
+  }
+}
+
+// ================= SETUP =================
 void setup() {
 
   Serial.begin(115200);
 
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
-
   pinMode(PIR_PIN, INPUT);
 
   pinMode(LED_ROJO, OUTPUT);
   pinMode(LED_BLANCO_1, OUTPUT);
   pinMode(LED_BLANCO_2, OUTPUT);
-
   pinMode(BUZZER_PIN, OUTPUT);
 
   digitalWrite(LED_ROJO, LOW);
   digitalWrite(LED_BLANCO_1, LOW);
   digitalWrite(LED_BLANCO_2, LOW);
 
-  noTone(BUZZER_PIN);
-
-  // Bluetooth
   SerialBT.begin("SEGURIDAD_IOT");
 
-  // WiFi
+  // WIFI
   WiFi.begin(ssid, password);
-
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -127,212 +144,102 @@ void setup() {
 
   Serial.println("\nWiFi conectado");
 
-  secureClient.setInsecure();
-
-  ThingSpeak.begin(client);
-
-  Serial.println("Sistema iniciado");
+  ThingSpeak.begin(tsClient);
 }
 
-// LOOP
-
+// ================= LOOP =================
 void loop() {
 
-  // BLUETOOTH enciende el sistema
-
+  // Bluetooth control
   if (SerialBT.available()) {
+    char c = SerialBT.read();
 
-    char comando = SerialBT.read();
-
-    if (comando == '1') {
-
-      sistemaArmado = true;
-
-      bot.sendMessage(
-        CHAT_ID,
-        "Sistema armado desde App Inventor",
-        "");
-
-      Serial.println("Sistema ACTIVADO");
-    }
-
-    if (comando == '0') {
-
+    if (c == '1') sistemaArmado = true;
+    if (c == '0') {
       sistemaArmado = false;
-
       alertaPuerta = false;
       intrusionConfirmada = false;
-
-      telegramPuertaEnviado = false;
-      telegramIntrusionEnviado = false;
-
-      tiempoInicioPuerta = 0;
-
-      digitalWrite(LED_ROJO, LOW);
-      digitalWrite(LED_BLANCO_1, LOW);
-      digitalWrite(LED_BLANCO_2, LOW);
-
-      noTone(BUZZER_PIN);
-
-      bot.sendMessage(
-        CHAT_ID,
-        "Sistema desarmado desde App Inventor",
-        "");
-
-      Serial.println("Sistema DESACTIVADO");
+      emailEnviado = false;
     }
   }
 
   float distancia = medirDistancia();
   bool movimiento = digitalRead(PIR_PIN);
 
-
   // SISTEMA DESARMADO
-  
-
   if (!sistemaArmado) {
-
     digitalWrite(LED_ROJO, LOW);
     digitalWrite(LED_BLANCO_1, LOW);
     digitalWrite(LED_BLANCO_2, LOW);
-
     noTone(BUZZER_PIN);
-
-    delay(100);
     return;
   }
 
-  
-  // ESTADO NORMAL el sistema activo enciended luz roja 
-
-
+  // ESTADO NORMAL
   if (!alertaPuerta && !intrusionConfirmada) {
 
     digitalWrite(LED_ROJO, HIGH);
 
-    digitalWrite(LED_BLANCO_1, LOW);
-    digitalWrite(LED_BLANCO_2, LOW);
+    if (distancia > 0 && distancia < DISTANCIA_UMBRAL) {
 
-    noTone(BUZZER_PIN);
-
-    if (distancia > 0 &&
-        distancia < DISTANCIA_UMBRAL) {
-
-      if (tiempoInicioPuerta == 0) {
+      if (tiempoInicioPuerta == 0)
         tiempoInicioPuerta = millis();
-      }
 
       if (millis() - tiempoInicioPuerta >= TIEMPO_PUERTA) {
-
         alertaPuerta = true;
         tiempoAlerta = millis();
-
-        if (!telegramPuertaEnviado) {
-
-          bot.sendMessage(
-            CHAT_ID,
-            "Presencia detectada en puerta",
-            "");
-
-          telegramPuertaEnviado = true;
-        }
       }
-    }
-    else {
 
+    } else {
       tiempoInicioPuerta = 0;
     }
   }
 
-  // ==================================================
-  // ALERTA DE PUERTA la luz roja parpadea y las blancas internas se encienden con el fin de disuadir
-  
-
+  // ALERTA PUERTA
   if (alertaPuerta && !intrusionConfirmada) {
-
-    if (millis() - ultimoParpadeo >= 500) {
-
-      estadoParpadeo = !estadoParpadeo;
-
-      digitalWrite(LED_ROJO, estadoParpadeo);
-
-      ultimoParpadeo = millis();
-    }
 
     digitalWrite(LED_BLANCO_1, HIGH);
     digitalWrite(LED_BLANCO_2, HIGH);
 
-    if (movimiento) {
-
+    if (movimiento && !emailEnviado) {
       intrusionConfirmada = true;
-
-      if (!telegramIntrusionEnviado) {
-
-        bot.sendMessage(
-          CHAT_ID,
-          "INTRUSION CONFIRMADA",
-          "");
-
-        telegramIntrusionEnviado = true;
-      }
-    }
-
-    if ((millis() - tiempoAlerta) >= TIEMPO_CONFIRMACION) {
-
-      alertaPuerta = false;
-
-      tiempoInicioPuerta = 0;
-
-      telegramPuertaEnviado = false;
-
-      digitalWrite(LED_BLANCO_1, LOW);
-      digitalWrite(LED_BLANCO_2, LOW);
-
-      digitalWrite(LED_ROJO, HIGH);
-
-      Serial.println("Falsa alarma");
+      enviarCorreoIntrusion();
+      emailEnviado = true;
     }
   }
 
- 
-  // INTRUSIÓN CONFIRMADA si hay intruso el PIR interno lo dectecta y se activa alerta sonoro-luminica
- 
-
+  // INTRUSIÓN
   if (intrusionConfirmada) {
 
-    if (millis() - ultimoParpadeo >= 200) {
-
+    if (millis() - ultimoParpadeo > 200) {
       estadoParpadeo = !estadoParpadeo;
 
       digitalWrite(LED_ROJO, estadoParpadeo);
       digitalWrite(LED_BLANCO_1, estadoParpadeo);
       digitalWrite(LED_BLANCO_2, estadoParpadeo);
 
-      if (estadoParpadeo) {
-        tone(BUZZER_PIN, 1500);
-      }
-      else {
-        tone(BUZZER_PIN, 2500);
-      }
+      tone(BUZZER_PIN, estadoParpadeo ? 3000 : 1500);
 
       ultimoParpadeo = millis();
     }
   }
 
-  
-  // THINGSPEAK guarda los datos
- 
+  // THINGSPEAK
+  if (millis() - ultimoEnvioTS > 20000) {
 
-  ThingSpeak.setField(1, distancia);
-  ThingSpeak.setField(2, movimiento);
-  ThingSpeak.setField(3, intrusionConfirmada);
-  ThingSpeak.setField(4, sistemaArmado);
+    ThingSpeak.setField(1, distancia);
+    ThingSpeak.setField(2, movimiento);
+    ThingSpeak.setField(3, sistemaArmado);
+    ThingSpeak.setField(4, intrusionConfirmada);
 
-  ThingSpeak.writeFields(channelID, writeAPIKey);
+    ThingSpeak.writeFields(channelID, writeAPIKey);
+
+    ultimoEnvioTS = millis();
+  }
 
 
   // MONITOR SERIE
-
+  
 
   Serial.print("Distancia: ");
   Serial.print(distancia);
@@ -344,7 +251,7 @@ void loop() {
   Serial.print(alertaPuerta);
 
   Serial.print(" | Intrusion: ");
-  Serial.print(intrusionConfirmada);
+  Serial.println(intrusionConfirmada);
 
   Serial.print(" | Armado: ");
   Serial.println(sistemaArmado);
