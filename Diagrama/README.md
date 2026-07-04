@@ -13,9 +13,5 @@ Los principales módulos incluidos son:
 - ESP32 como unidad central de procesamiento.
 - LEDs y buzzer como actuadores de alerta.
 - Comunicación Bluetooth con aplicación desarrollada en MIT App Inventor.
-- Comunicación WiFi para integración con Telegram y ThingSpeak.
+- Comunicación WiFi para integración con Gmail y ThingSpeak.
 - Alimentación mediante power bank de 5 V.
-
-## Diagramas Electrónicos
-
-También se incluyen los esquemáticos y diseños electrónicos desarrollados para la construcción física del prototipo.
